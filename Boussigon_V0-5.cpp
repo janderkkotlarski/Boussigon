@@ -21,6 +21,15 @@ struct player_circle
     
     sf::CircleShape m_circle{m_radius};
     
+    void set_position(const sf::Vector2f position)
+    {
+        
+        m_position = position;
+        
+        m_circle.setPosition(m_position);
+        
+    }
+    
     player_circle(const float radius, const sf::Color& color, const sf::Vector2f& position);
     
     ~player_circle();
@@ -48,6 +57,29 @@ void recolor_player_circle(player_circle& play_circ, const sf::Color color)
     
     play_circ.m_color = color;
     play_circ.m_circle.setFillColor(play_circ.m_color);
+    
+}
+
+void stop_circle(player_circle& play_circ, const sf::Vector2f& position)
+{
+    
+    play_circ.set_position(position);
+    
+    play_circ.m_speedirection = sf::Vector2f(0.0f, 0.0f);
+            
+}
+
+void moving_circle(player_circle& play_circ, const sf::Vector2f& move)
+{
+    
+    play_circ.set_position(play_circ.m_position + move);
+    
+}
+
+void move_circle(player_circle& play_circ)
+{
+    
+    moving_circle(play_circ, play_circ.m_speedirection);
     
 }
 
@@ -113,13 +145,30 @@ float square_corner_circle(const sf::Vector2f& circ_posi, const sf::Vector2f& sq
     
 }
 
-bool collision_check(const player_circle& play_circ, const object_square& obj_sqr)
+int collision_check(player_circle& play_circ, const object_square& obj_sqr)
 {
+    
+    const float sqrt_2{static_cast<float>(sqrt(2.0))};
+    
+    const float dist_x{play_circ.m_position.x - obj_sqr.m_position.x};
+    const float dist_y{play_circ.m_position.y - obj_sqr.m_position.y};
+    
+    const float abs_dist_x{std::abs(dist_x)};
+    const float abs_dist_y{std::abs(dist_y)};
+    
     const float circ_radi{play_circ.m_radius};
     const float squr_radi{obj_sqr.m_radius};
     
-    const float dist_x{std::abs(play_circ.m_position.x - obj_sqr.m_position.x)};
-    const float dist_y{std::abs(play_circ.m_position.y - obj_sqr.m_position.y)};
+
+
+
+    
+    const float semi_radi{0.5f*sqrt_2*circ_radi + squr_radi};
+
+    const float total_radi{circ_radi + squr_radi};
+    const float radi_radi{circ_radi*circ_radi};
+    
+    
     
     const float radi_radi_a{square_corner_circle(play_circ.m_position, obj_sqr.m_position,
                                                      squr_radi, squr_radi)};
@@ -132,20 +181,90 @@ bool collision_check(const player_circle& play_circ, const object_square& obj_sq
 
     const float radi_radi_d{square_corner_circle(play_circ.m_position, obj_sqr.m_position,
                                                      -squr_radi, -squr_radi)};
-                                                     
-    if (((dist_x <= squr_radi) && (dist_y <= circ_radi + squr_radi)) ||
-        ((dist_y <= squr_radi) && (dist_x <= circ_radi + squr_radi)) ||
-        (radi_radi_a <= circ_radi*circ_radi) ||
-        (radi_radi_b <= circ_radi*circ_radi) ||
-        (radi_radi_c <= circ_radi*circ_radi) ||
-        (radi_radi_d <= circ_radi*circ_radi))
+                                        
+    if ((dist_x > squr_radi) && (dist_y > squr_radi) && (radi_radi_a < radi_radi))
     {
         
-        return true;
+        stop_circle(play_circ, sf::Vector2f(obj_sqr.m_position.x + semi_radi, obj_sqr.m_position.y + semi_radi));
+        
+        return 3;
         
     }
-
-    return false;
+    
+    if ((-dist_x > squr_radi) && (-dist_y > squr_radi) && (radi_radi_d < radi_radi))
+    {
+        
+        stop_circle(play_circ, sf::Vector2f(obj_sqr.m_position.x - semi_radi, obj_sqr.m_position.y - semi_radi));
+        
+        return 7;
+        
+    }
+    
+    if ((-dist_x > squr_radi) && (dist_y > squr_radi) && (radi_radi_b < radi_radi))
+    {
+        
+        stop_circle(play_circ, sf::Vector2f(obj_sqr.m_position.x - semi_radi, obj_sqr.m_position.y + semi_radi));
+        
+        return 1;
+        
+    }
+    
+    if ((dist_x > squr_radi) && (-dist_y > squr_radi) && (radi_radi_c < radi_radi))
+    {
+        
+        stop_circle(play_circ, sf::Vector2f(obj_sqr.m_position.x + semi_radi, obj_sqr.m_position.y - semi_radi));
+        
+        return 9;
+        
+    }
+           
+    if((abs_dist_x <= squr_radi)) 
+    {      
+                                                     
+        if ((dist_y < total_radi) && (dist_y >= -dist_x) && (dist_y >= dist_x))
+        {
+              
+            stop_circle(play_circ, sf::Vector2f(play_circ.m_position.x, obj_sqr.m_position.y + total_radi));
+                
+            return 2;
+                 
+        }
+        
+        if ((-dist_y < total_radi) && (dist_y <= -dist_x) && (dist_y <= dist_x))
+        {
+              
+            stop_circle(play_circ, sf::Vector2f(play_circ.m_position.x, obj_sqr.m_position.y - total_radi));
+                
+            return 8;
+                 
+        }
+        
+    }
+    
+    if((abs_dist_y <= squr_radi)) 
+    {      
+                                                     
+        if ((dist_x < total_radi) && (dist_y >= -dist_x) && (dist_y <= dist_x))
+        {
+              
+            stop_circle(play_circ, sf::Vector2f(obj_sqr.m_position.x + total_radi, play_circ.m_position.y));
+                
+            return 6;
+                 
+        }
+        
+        if ((-dist_x < total_radi) && (dist_y <= -dist_x) && (dist_y >= dist_x))
+        {
+              
+            stop_circle(play_circ, sf::Vector2f(obj_sqr.m_position.x - total_radi, play_circ.m_position.y));
+                
+            return 4;
+                 
+        }
+        
+    }
+    
+    return 0;
     
 }
 
@@ -153,7 +272,7 @@ void collision_color(player_circle& play_circ, const object_square& obj_sqr,
                      const sf::Color& colli_color, const sf::Color apart_color)
 {
     
-    if (collision_check(play_circ, obj_sqr))
+    if (collision_check(play_circ, obj_sqr) == 2)
     {
         
         recolor_player_circle(play_circ, colli_color);
@@ -165,15 +284,6 @@ void collision_color(player_circle& play_circ, const object_square& obj_sqr,
         recolor_player_circle(play_circ, apart_color);
         
     }   
-    
-}
-
-void moving(player_circle& play_circ, const sf::Vector2f& move)
-{
-    
-    play_circ.m_position = play_circ.m_position + move;
-    
-    play_circ.m_circle.setPosition(play_circ.m_position);
     
 }
 
@@ -210,15 +320,53 @@ void move_dir(player_circle& play_circ, const float delta_dist)
         
     }
     
-    moving(play_circ, move);
+    moving_circle(play_circ, move);
         
+}
+
+sf::Vector2f mouse_position(sf::RenderWindow& window)
+{
+    
+    return static_cast<sf::Vector2f>(sf::Mouse::getPosition(window));
+    
+}
+
+
+bool left_mouse_click()
+{
+    
+    return (sf::Mouse::isButtonPressed(sf::Mouse::Left));
+    
+}
+
+void mouse_speedirection(sf::RenderWindow& window, player_circle& play_circ, const float speed_mult,
+                         const float decay_mult)
+{
+    
+    assert(speed_mult > 0.0f);    
+    assert(speed_mult < 1.0f);
+    
+    assert(decay_mult > 0.0f);    
+    assert(decay_mult < 1.0f);
+    
+    play_circ.m_speedirection = decay_mult*play_circ.m_speedirection;
+    
+    if (left_mouse_click())
+    {
+        
+        play_circ.m_speedirection = speed_mult*(mouse_position(window) - play_circ.m_position);
+                
+    }
+    
+    move_circle(play_circ);
+    
 }
 
 
 int main()
 {
     
-    const std::string program_name{"Boussigon V0.3"};
+    const std::string program_name{"Boussigon V0.4"};
     
     assert(program_name != "");
     
@@ -235,6 +383,8 @@ int main()
     
     const std::chrono::milliseconds delay{delaz};
     
+    const int count_max{10};
+    
     const sf::Color white{sf::Color(255, 255, 255)};    
     const sf::Color black{sf::Color(0, 0, 0)};    
     const sf::Color orange{sf::Color(255, 127, 0)};    
@@ -247,13 +397,21 @@ int main()
     
     sf::RenderWindow window{sf::VideoMode(window_x, window_y), program_name, sf::Style::Default};
     
-    const float delta_dist = 3.0f;
+    const float init_delta_dist{3.0};
+    
+    const float delta_dist{init_delta_dist/static_cast<float>(count_max)};
     
     const float circ_radius{50.0f};    
     const sf::Color circ_color{purple};
     const sf::Color colli_color{orange};    
     const sf::Vector2f circ_position{0.25f*window_x, 0.5f*window_y};    
     player_circle player{circ_radius, circ_color, circ_position};
+    
+    const float init_speed_mult{0.01};
+    
+    const float speed_mult{init_speed_mult/static_cast<float>(count_max)};
+    const float speed_to_decay{0.5f};
+    const float decay_mult{1.0f - speed_to_decay*speed_mult};
     
     const float rect_radius{50.0f};    
     const sf::Color rect_color{green};    
@@ -275,7 +433,14 @@ int main()
         
         std::this_thread::sleep_for(delay);
         
-        move_dir(player, delta_dist);
+        for (int count{0}; count < count_max; ++count)
+        {
+        
+            // move_dir(player, delta_dist);
+            
+            mouse_speedirection(window, player, speed_mult, decay_mult);
+                    
+        }
         
         collision_color(player, object, colli_color, circ_color);
                     
